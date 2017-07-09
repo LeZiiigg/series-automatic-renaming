@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -54,17 +54,20 @@ def script(directory, name = None):
 			if m:
 				season = int(m.group('season'))
 				episode = int(m.group('episode'))
+				extension = m.group('extension')
 				title = None
 				if table and (season in table):
 					title = table[season][episode]
 				elif table and not (2 in table):
 					title = table[1][episode]
-				
-				filename = name + ' S' + str(season).zfill(2) + 'E' + str(episode).zfill(2)
 				if title:
-					filename += ' ' + title
-				filename += "." + m.group('extension')
-				os.rename(path, os.path.join(directory, filename))
+					title = re.sub('(<|>|:|"|/|\\\|\||\?|\*)', '_', title)
+				
+				filename = '{} S{:02}E{:02}{}.{}'.format(name, season, episode, title and (' ' + title) or '', extension)
+				try:
+					os.rename(path, os.path.join(directory, filename))
+				except OSError:
+					sys.stderr.write("invalid name: '{}'\n".format(filename))
 
 # Launch the script
 
