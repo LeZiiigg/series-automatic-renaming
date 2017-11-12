@@ -22,7 +22,7 @@ def parse(url):
 			j = 0
 			for summary in table.find_all("td", "summary"):
 				try:
-					j = int(summary.find_previous_sibling("td").get_text())
+					j = int(summary.find_previous_sibling().get_text())
 				except (ValueError, AttributeError) as e:
 					pass
 				l[i+1][j] = summary.get_text().strip('\'\"') # TODO: Strip the [...]
