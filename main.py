@@ -45,7 +45,7 @@ def script(directory, name = None):
 
 	# Here comes the Frag Dog, honey
 
-	for entry in os.listdir(directory):	
+	for entry in sorted(os.listdir(directory)):
 		path = os.path.join(directory, entry)
 		if os.path.isdir(path):			# Call the script recursively for each subdirectory
 			script(path, name)
@@ -57,6 +57,9 @@ def script(directory, name = None):
 				extension = m.group('extension')
 				title = None
 				if table and (season in table):
+					if not episode in table[season]:
+						offset = episode - min(table[season].keys())
+						table[season] = {i + offset: table[season][i] for i in table[season].keys()}
 					title = table[season][episode]
 				elif table and not (2 in table):
 					title = table[1][episode]
