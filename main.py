@@ -1,77 +1,62 @@
 #!/usr/bin/env python3
 
-import sys
+
+import argparse
 import os
 import re
-import subprocess
-from argparse import ArgumentParser
-from pprint import pprint
 
-import wikiepisodetable
+import seriesnaming
 
-# Parse the arguments list
 
-parser = ArgumentParser()
-parser.add_argument('directory', nargs = '*', default = os.getcwd(), type = os.path.normpath)
-parser.add_argument('-n', '--name', type = str, help = 'the series name')
-parser.add_argument('-w', '--wiki', type = str, help = 'the wikipedia url from where to get the episodes names')
+parser = argparse.ArgumentParser()
+parser.add_argument('directory', nargs='*', default=[os.getcwd()], type=os.path.normpath)
+parser.add_argument('-n', '--name', type=str, help='the series name')
+parser.add_argument('-t', '--titles', action='store_true', help='fetch episode titles from the internet')
+parser.add_argument('-l', '--language', choices=['en', 'fr'], default='en', help='the language to use for fetching episode titles')
 args = parser.parse_args()
 
-# Parse the wikipedia URL
 
-table = args.wiki and wikiepisodetable.parse(args.wiki)
-if table:
-	pprint(table)
-	answer = input('Use those episode titles? [y/N] ')
-	if not answer or not (answer.lower() in ['y', 'yes']):
-		table = None					# Invalidate the titles table
+def script(directory, naming_helper):
 
-# Main script
-
-def script(directory, name = None):
-
-	if isinstance(directory, list):
-		if len(directory) > 1:			# Call the script for each separate directory
-			for entry in directory:
-				script(entry)
-			return
-		else:							# Cast the list into its first and single element
-			directory = directory[0]
-
-	# Get the series name if none was provided
-
-	if not name:						
-		name = os.path.basename(directory)
-
-	# Here comes the Frag Dog, honey
-
-	for entry in sorted(os.listdir(directory)):
-		path = os.path.join(directory, entry)
-		if os.path.isdir(path):			# Call the script recursively for each subdirectory
-			script(path, name)
+	for inode in os.listdir(directory):
+		
+		# Get the series name if none was provided
+		
+		if naming_helper is None:
+			if re.match('(?:season|series|saison)\s*\d+\w*', inode, re.IGNORECASE):
+				parent_directory = os.path.dirname(directory)
+				series_name = os.path.basename(parent_directory)
+			else:
+				series_name = inode
+			sub_naming_helper = seriesnaming.NamingHelper(series_name, args.titles, args.language)
 		else:
-			m = re.match('^.*s(?P<season>\d+)e(?P<episode>\d+).*\.(?P<extension>\w+)$', entry, re.IGNORECASE)
-			if m:
-				season = int(m.group('season'))
-				episode = int(m.group('episode'))
-				extension = m.group('extension')
-				title = None
-				if table and (season in table):
-					if not episode in table[season]:
-						offset = episode - min(table[season].keys())
-						table[season] = {i + offset: table[season][i] for i in table[season].keys()}
-					title = table[season][episode]
-				elif table and not (2 in table):
-					title = table[1][episode]
-				if title:
-					title = re.sub('(<|>|:|"|/|\\\|\||\?|\*)', '_', title)
-				
-				filename = '{} S{:02}E{:02}{}.{}'.format(name, season, episode, title and (' ' + title) or '', extension)
-				try:
-					os.rename(path, os.path.join(directory, filename))
-				except OSError:
-					sys.stderr.write("invalid name: '{}'\n".format(filename))
+			sub_naming_helper = naming_helper
+	
+		# Here comes the Frag Dog, honey
+		
+		if os.path.isdir(inode):
+			subdirectory = os.path.join(directory, inode)
+			script(subdirectory, sub_naming_helper)
+		else:
+			old_filepath = os.path.join(directory, inode)
+			try:
+				new_filepath = sub_naming_helper.get_updated_filepath(old_filepath)
+				new_filedir = os.path.normpath(os.path.dirname(new_filepath))
+				print(old_filepath, '->', new_filepath)
+				os.makedirs(new_filedir, exist_ok=True)
+				os.rename(old_filepath, new_filepath)
+			except ValueError:
+				pass
 
+			
 # Launch the script
 
-script(args.directory, args.name)
+if args.name is not None:
+	naming_helper = seriesnaming.NamingHelper(args.name, args.titles, args.language)
+else:
+	naming_helper = None
+
+for directory in args.directory:
+	script(directory, naming_helper)
+
+
