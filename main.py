@@ -22,7 +22,7 @@ def script(directory, naming_helper):
 	# Get the series name if none was provided
 	
 	if naming_helper is None:
-		if re.match('(?:season|series|saison)\s*\d+\w*', directory, re.IGNORECASE):
+		if re.match('(?:season|series|saison)\s*\d+\w*', os.path.basename(directory), re.IGNORECASE):
 			parent_directory = os.path.dirname(directory)
 			series_name = os.path.basename(parent_directory)
 		else:
@@ -30,14 +30,15 @@ def script(directory, naming_helper):
 		naming_helper = seriesnaming.NamingHelper(series_name, args.titles, args.language)
 
 	for inode in os.listdir(directory):
+		inode = os.path.join(directory, inode)
 	
 		# Here comes the Frag Dog, honey
 		
 		if os.path.isdir(inode):
-			subdirectory = os.path.join(directory, inode)
+			subdirectory = inode
 			script(subdirectory, naming_helper)
 		else:
-			old_filepath = os.path.join(directory, inode)
+			old_filepath = inode
 			try:
 				new_filepath = naming_helper.get_updated_filepath(old_filepath)
 				new_filedir = os.path.normpath(os.path.dirname(new_filepath))

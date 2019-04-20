@@ -14,7 +14,7 @@ def fetch_series_season_titles(wiki_page_url, season_no, search_language):
 		return _fetch_series_season_titles_list_of_episodes_en(wiki_page_url, season_no)
 	elif search_language == 'fr' and re.search('saison_\d+\w*_de', wiki_page_url, re.IGNORECASE):
 		return _fetch_series_season_titles_season_x_fr(wiki_page_url)
-	elif search_language == 'fr' and re.search('liste_des_.pisodes_de', wiki_page_url, re.IGNORECASE):
+	elif search_language == 'fr' and re.search('liste_des_.+pisodes_de', wiki_page_url, re.IGNORECASE):
 		return _fetch_series_season_titles_list_of_episodes_fr(wiki_page_url, season_no)
 	else:
 		raise ValueError('unsupported page class and/or language: {}, {}'.format(wiki_page_url, search_language))
@@ -37,7 +37,7 @@ def _fetch_series_season_titles_list_of_episodes_fr(wiki_page_url, season_no):
 
 
 def _get_rows_from_wikitable_tag(wikitable_tag):
-	for vevent in self._wikiepisodetable.find_all(class_='vevent'):
+	for vevent in wikitable_tag.find_all(class_='vevent'):
 		no_overall_tag = vevent.find('th')
 		no_overall = no_overall_tag.get_text()
 		no_season_tag = no_overall_tag.next_sibling
